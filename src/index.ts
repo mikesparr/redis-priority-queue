@@ -1,11 +1,11 @@
 import * as redis from "redis";
 
-export interface IPriorityQueue {
+export interface IPriorityQueue<T> {
     length(channel: string): Promise<number>;
     isEmpty(channel: string) : Promise<boolean>;
     insertWithPriority(channel: string, element: any, priority: number) : Promise<void>;
-    pullHighestPriority(channel: string) : Promise<string>;
-    peek(channel: string): Promise<string>;
+    pullHighestPriority(channel: string) : Promise<T>;
+    peek(channel: string): Promise<T>;
 }
 
 export class RedisConfig {
@@ -22,7 +22,7 @@ export class RedisConfig {
     }
 }
 
-export class RedisPriorityQueue implements IPriorityQueue {
+export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
     protected _client: any;
     protected readonly DEFAULT_REDIS_HOST : string = "localhost";
     protected readonly DEFAULT_REDIS_PORT : number = 6379;
@@ -86,7 +86,7 @@ export class RedisPriorityQueue implements IPriorityQueue {
         });
     }
 
-    insertWithPriority(channel: string, element: any, priority: number) : Promise<void> {
+    insertWithPriority(channel: string, element: T, priority: number) : Promise<void> {
         return new Promise((resolve, reject) => {
             console.log(`Inserting into ${channel} with priority ${priority} ...`);
             this._client.zincrby(channel, priority, element, (err: Error, reply: number) => {
@@ -101,7 +101,7 @@ export class RedisPriorityQueue implements IPriorityQueue {
         });
     }
 
-    pullHighestPriority(channel: string) : Promise<string> {
+    pullHighestPriority(channel: string) : Promise<T> {
         return new Promise((resolve, reject) => {
             console.log(`Removing highest priority item from channel '${channel}'...`);
             this._client.multi()
@@ -110,11 +110,11 @@ export class RedisPriorityQueue implements IPriorityQueue {
                         console.error(`Error fetching next item from '${channel}' to remove: `, err);
                         reject(err);
                     }
+
                     const member: string = reply && Object.keys(reply).length > 0 ? reply : "none";
                     this._client.zrem(channel, member);
                 })
-                .exec((err: Error, replies: string) => {
-                    console.log({err, replies});
+                .exec((err: Error, replies: any) => {
                     if (err !== null) {
                         console.error(`Error pulling item from channel '${channel}': `, err);
                         reject(err);
@@ -126,10 +126,10 @@ export class RedisPriorityQueue implements IPriorityQueue {
         });
     }
 
-    peek(channel: string) : Promise<string> {
+    peek(channel: string) : Promise<T> {
         return new Promise((resolve, reject) => {
             console.log(`Peeking at first record`);
-            this._client.zrevrange(channel, 0, 0, (err: Error, reply: string) => {
+            this._client.zrevrange(channel, 0, 0, (err: Error, reply: any) => {
                 if (err !== null) {
                     console.error(`Error peeking for first record in channel '${channel}': `, err);
                     reject(err);

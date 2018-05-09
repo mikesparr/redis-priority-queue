@@ -44,7 +44,7 @@ let config: RedisConfig = new RedisConfig(
     null
 );
 
-let myQueue : IPriorityQueue = new RedisPriorityQueue(config);
+let myQueue : IPriorityQueue<string> = new RedisPriorityQueue(config);
 ```
 
 ### Insert element

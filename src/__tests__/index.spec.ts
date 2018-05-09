@@ -9,7 +9,7 @@ describe('RedisPriorityQueue', () => {
         null,
         null
     );
-    let myQueue : IPriorityQueue = new RedisPriorityQueue(config);
+    let myQueue : IPriorityQueue<string> = new RedisPriorityQueue(config);
     let testKey : string = "test123";
     let testEmptyKey : string = "testEmptyKey999";
 

@@ -92,7 +92,6 @@ var RedisPriorityQueue = (function () {
                 _this._client.zrem(channel, member);
             })
                 .exec(function (err, replies) {
-                console.log({ err: err, replies: replies });
                 if (err !== null) {
                     console.error("Error pulling item from channel '" + channel + "': ", err);
                     reject(err);
