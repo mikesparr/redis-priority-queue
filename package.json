@@ -1,0 +1,49 @@
+{
+  "name": "redis-priority-queue",
+  "version": "0.1.0",
+  "description": "Simple priority queue using Redis sorted set.",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "dependencies": {
+    "@types/jest": "^22.2.3",
+    "@types/redis": "^2.8.6",
+    "redis": "^2.8.0"
+  },
+  "devDependencies": {
+    "jest": "^22.4.3",
+    "typescript": "^2.8.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js"
+    ],
+    "transform": {
+      "^.+\\.(ts|tsx)$": "<rootDir>/preprocessor.js"
+    },
+    "testMatch": [
+      "**/__tests__/*.+(ts|tsx|js)"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mikesparr/redis-priority-queue.git"
+  },
+  "keywords": [
+    "queue",
+    "priority",
+    "queue",
+    "redis",
+    "sorted",
+    "set"
+  ],
+  "author": "Mike Sparr",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mikesparr/redis-priority-queue/issues"
+  },
+  "homepage": "https://github.com/mikesparr/redis-priority-queue#readme"
+}
