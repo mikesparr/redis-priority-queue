@@ -18,11 +18,34 @@ var RedisPriorityQueue = (function () {
         console.log('Redis client created');
     }
     RedisPriorityQueue.prototype.length = function (channel) {
-        return this._client.zrevrange(channel);
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            _this._client.zcard(channel, function (err, reply) {
+                if (err !== null) {
+                    console.error("Error getting length for channel '" + channel + "': ", err);
+                    reject(err);
+                }
+                console.log("Channel '" + channel + "' length is: " + reply);
+                resolve(reply);
+            });
+        });
     };
     RedisPriorityQueue.prototype.isEmpty = function (channel) {
+        var _this = this;
         return new Promise(function (resolve, reject) {
-            resolve(true);
+            _this._client.zcard(channel, function (err, reply) {
+                if (err !== null) {
+                    console.error("Error checking channel '" + channel + "' isEmpty: ", err);
+                    reject(err);
+                }
+                console.log("Channel '" + channel + "' isEmpty: " + (reply > 0 ? false : true));
+                if (reply > 0) {
+                    resolve(false);
+                }
+                else {
+                    resolve(true);
+                }
+            });
         });
     };
     RedisPriorityQueue.prototype.insertWithPriority = function (channel, element, priority) {
@@ -30,8 +53,11 @@ var RedisPriorityQueue = (function () {
         return new Promise(function (resolve, reject) {
             console.log("Inserting into " + channel + " with priority " + priority + " ...");
             _this._client.zincrby(channel, priority, element, function (err, reply) {
-                console.log({ err: err, reply: reply });
-                console.log("Inserted into " + channel + " with priority " + priority + "!");
+                if (err !== null) {
+                    console.error("Error inserting into channel '" + channel + "': ", err);
+                    reject(err);
+                }
+                console.log("Inserted into '" + channel + "' with priority '" + priority + "' and result: " + reply);
                 resolve();
             });
         });
@@ -39,24 +65,27 @@ var RedisPriorityQueue = (function () {
     RedisPriorityQueue.prototype.pullHighestPriority = function (channel) {
         var _this = this;
         return new Promise(function (resolve, reject) {
-            var poppedItem = null;
-            var attempts = 0;
-            do {
-                console.log("Removing highest priority item from queue...");
+            for (var attempts = 0; attempts < _this.MAX_ATTEMPTS; attempts++) {
+                console.log("Removing highest priority item from channel '" + channel + "'...");
                 _this.peek(channel)
                     .then(function (item) {
                     console.log("Fetched " + item + " and attempting to remove ...");
                     _this._client.zrem(channel, item, function (err, reply) {
-                        console.log("Removed item from queue");
-                        console.log({ err: err, reply: reply });
-                        if (reply != "0") {
-                            poppedItem = item;
+                        if (err !== null) {
+                            console.error("Error popping latest record from channel '" + channel + "': ", err);
+                            reject(err);
                         }
-                        attempts++;
+                        console.log("Removed item '" + item + "' from channel '" + channel + "'");
+                        if (reply > 0) {
+                            resolve(item);
+                        }
                     });
+                })
+                    .catch(function (error) {
+                    console.error("Error peeking for record to pop in channel '" + channel + "': ", error);
+                    reject(error);
                 });
-            } while (poppedItem === null || attempts === _this.MAX_ATTEMPTS);
-            resolve(poppedItem);
+            }
         });
     };
     RedisPriorityQueue.prototype.peek = function (channel) {
@@ -64,7 +93,10 @@ var RedisPriorityQueue = (function () {
         return new Promise(function (resolve, reject) {
             console.log("Peeking at first record");
             _this._client.zrevrange(channel, 0, 0, function (err, reply) {
-                console.log({ err: err, reply: reply });
+                if (err !== null) {
+                    console.error("Error peeking for first record in channel '" + channel + "': ", err);
+                    reject(err);
+                }
                 resolve(reply[0]);
             });
         });

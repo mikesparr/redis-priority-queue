@@ -27,26 +27,52 @@ export class RedisPriorityQueue implements IPriorityQueue {
     protected MAX_ATTEMPTS : number = 5;
 
     constructor(config: RedisConfig) {
-        this._client = redis.createClient();
+        this._client = redis.createClient(); // TODO: use config 
         console.log('Redis client created');
     }
 
     length(channel: string) : Promise<number> {
-        return this._client.zrevrange(channel, );
+        return new Promise((resolve, reject) => {
+            this._client.zcard(channel, (err: Error, reply: number) => {
+                if (err !== null) {
+                    console.error(`Error getting length for channel '${channel}': `, err);
+                    reject(err);
+                }
+
+                console.log(`Channel '${channel}' length is: ${reply}`);
+                resolve(reply);
+            });
+        })
     }
 
     isEmpty(channel: string) : Promise<boolean> { 
         return new Promise((resolve, reject) => {
-            resolve(true);
+            this._client.zcard(channel, (err: Error, reply: number) => {
+                if (err !== null) {
+                    console.error(`Error checking channel '${channel}' isEmpty: `, err);
+                    reject(err);
+                }
+
+                console.log(`Channel '${channel}' isEmpty: ${reply > 0 ? false : true}`);
+                if (reply > 0) {
+                    resolve(false);
+                } else {
+                    resolve(true);
+                }
+            });
         })
     }
 
     insertWithPriority(channel: string, element: any, priority: number) : Promise<void> {
         return new Promise((resolve, reject) => {
             console.log(`Inserting into ${channel} with priority ${priority} ...`);
-            this._client.zincrby(channel, priority, element, (err: Error, reply: string) => {
-                console.log({err, reply});
-                console.log(`Inserted into ${channel} with priority ${priority}!`);
+            this._client.zincrby(channel, priority, element, (err: Error, reply: number) => {
+                if (err !== null) {
+                    console.error(`Error inserting into channel '${channel}': `, err);
+                    reject(err);
+                }
+
+                console.log(`Inserted into '${channel}' with priority '${priority}' and result: ${reply}`);
                 resolve();
             });
         });
@@ -56,20 +82,24 @@ export class RedisPriorityQueue implements IPriorityQueue {
         return new Promise((resolve, reject) => {
 
             for (let attempts = 0; attempts < this.MAX_ATTEMPTS; attempts++) {
-                console.log(`Removing highest priority item from queue...`);
+                console.log(`Removing highest priority item from channel '${channel}'...`);
                 this.peek(channel)
                     .then(item => {
                         console.log(`Fetched ${item} and attempting to remove ...`);
-                        this._client.zrem(channel, item, (err: Error, reply: string) => {
-                            console.log(`Removed item from queue`);
-                            console.log({err, reply});
-                            if (reply != "0") {
+                        this._client.zrem(channel, item, (err: Error, reply: number) => {
+                            if (err !== null) {
+                                console.error(`Error popping latest record from channel '${channel}': `, err);
+                                reject(err);
+                            }
+                            
+                            console.log(`Removed item '${item}' from channel '${channel}'`);
+                            if (reply > 0) {
                                 resolve(item);
                             }
                         });
                     })
                     .catch(error => {
-                        console.error({error});
+                        console.error(`Error peeking for record to pop in channel '${channel}': `, error);
                         reject(error);
                     });
             }
@@ -80,8 +110,12 @@ export class RedisPriorityQueue implements IPriorityQueue {
         return new Promise((resolve, reject) => {
             console.log(`Peeking at first record`);
             this._client.zrevrange(channel, 0, 0, (err: Error, reply: string) => {
-                console.log({err, reply});
-                resolve(reply[0]);
+                if (err !== null) {
+                    console.error(`Error peeking for first record in channel '${channel}': `, err);
+                    reject(err);
+                }
+
+                resolve(reply[0]); // TODO: guard against unexpected type
             });
         });
     }

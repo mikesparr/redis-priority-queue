@@ -1,15 +1,15 @@
 
-import * as queue from "../index";
+import {RedisConfig, IPriorityQueue, RedisPriorityQueue} from "../index";
 import * as redis from "redis";
 
 describe('RedisPriorityQueue', () => {
-    let config: queue.RedisConfig = new queue.RedisConfig(
+    let config: RedisConfig = new RedisConfig(
         "localhost",
         6822,
         null,
         null
     );
-    let myQueue : queue.IPriorityQueue = new queue.RedisPriorityQueue(config);
+    let myQueue : IPriorityQueue = new RedisPriorityQueue(config);
     let testKey : string = "test123";
 
     let client : any = redis.createClient(); // for confirming app TODO: mock
@@ -18,8 +18,89 @@ describe('RedisPriorityQueue', () => {
         expect(myQueue).toBeDefined();
     }); // constructor
 
-    describe('isEmpty', () => {
+    describe('length', () => {
+        beforeAll((done) => {
+            Promise.all([
+                myQueue.insertWithPriority(testKey, "hello", 1),
+                myQueue.insertWithPriority(testKey, "world", 2),
+                myQueue.insertWithPriority(testKey, "foo", 1)
+            ])
+                .then(values => {
+                    done();
+                })
+                .catch(error => {
+                    done.fail(error);
+                });
+        });
 
+        afterAll((done) => {
+            client.del(testKey, (err, reply) => {
+                if (err !== null) {
+                    done.fail(err);
+                } else {
+                    done();
+                }
+            });
+        });
+
+        it('returns number of elements in queue', (done) => {
+            myQueue.length(testKey)
+                .then(result => {
+                    expect(result).toEqual(3);
+                    done();
+                })
+                .catch(error => {
+                    done.fail(error);
+                });
+        })
+    }); // length
+
+    describe('isEmpty', () => {
+        beforeAll((done) => {
+            Promise.all([
+                myQueue.insertWithPriority(testKey, "hello", 1),
+                myQueue.insertWithPriority(testKey, "world", 2),
+                myQueue.insertWithPriority(testKey, "foo", 1)
+            ])
+                .then(values => {
+                    done();
+                })
+                .catch(error => {
+                    done.fail(error);
+                });
+        });
+
+        afterAll((done) => {
+            client.del(testKey, (err, reply) => {
+                if (err !== null) {
+                    done.fail(err);
+                } else {
+                    done();
+                }
+            });
+        });
+
+        it('returns true if no elements are in queue', (done) => {
+            myQueue.isEmpty("testEmptyKey123")
+                .then(result => {
+                    expect(result).toBeTruthy();
+                    done();
+                })
+                .catch(error => {
+                    done.fail(error);
+                });
+        });
+
+        it('returns false if elements are in queue', (done) => {
+            myQueue.isEmpty(testKey)
+                .then(result => {
+                    expect(result).toBeFalsy();
+                    done();
+                })
+                .catch(error => {
+                    done.fail(error);
+                });
+        });
     }); // isEmpty
 
     describe('peek', () => {
@@ -35,7 +116,7 @@ describe('RedisPriorityQueue', () => {
                 })
                 .catch(error => {
                     done.fail(error);
-                })
+                });
         });
 
         afterAll((done) => {
@@ -73,7 +154,7 @@ describe('RedisPriorityQueue', () => {
                 })
                 .catch(error => {
                     done.fail(error);
-                })
+                });
         });
 
         afterAll((done) => {
@@ -117,7 +198,7 @@ describe('RedisPriorityQueue', () => {
                 })
                 .catch(error => {
                     done.fail(error);
-                })
+                });
         });
 
         afterAll((done) => {
@@ -146,7 +227,7 @@ describe('RedisPriorityQueue', () => {
                 })
                 .catch(error => {
                     done.fail(error);
-                })
+                });
         });
     }); // getHighestPriority
 }); // redis priority queue
