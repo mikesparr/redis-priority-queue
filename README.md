@@ -1,5 +1,5 @@
 # Redis Priority Queue
-This is a simple priority queue implementation that leverages Redis sorted set.
+This is a simple Promise based multi-channel priority queue implementation that leverages Redis sorted set.
 
 # Requirements
 You will need Redis server running.
@@ -9,10 +9,28 @@ You will need Redis server running.
 
 # Test
 The test script in `package.json` preprocesses the `.ts` file and then executes.
+
 `npm test`
 
 # Usage
 The source was written in Typescript, yet it compiles to Javascript, so you can use in ES5 or later supported environments. The following code snippets are implemented in the `__tests__` folder.
+
+## Quick start (Node)
+```
+const queue = require('redis-priority-queue');
+
+const config = queue.RedisConfig("localhost", 6379, null, null);
+
+const myQueue = queue.RedisPriorityQueue(config);
+
+myQueue.length("emptyQueue")
+  .then(result => {
+    console.log({result});
+  })
+  .catch(error => {
+    console.error({error});
+  });
+```
 
 ## Typescript
 ### Initialization

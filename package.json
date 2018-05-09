@@ -1,18 +1,18 @@
 {
   "name": "redis-priority-queue",
-  "version": "0.1.0",
-  "description": "Simple priority queue using Redis sorted set.",
+  "version": "0.1.1",
+  "description": "Simple Promise based multi-channel priority queue using Redis sorted set.",
   "main": "index.js",
   "scripts": {
     "test": "jest"
   },
   "dependencies": {
-    "@types/jest": "^22.2.3",
     "@types/redis": "^2.8.6",
     "redis": "^2.8.0"
   },
   "devDependencies": {
     "jest": "^22.4.3",
+    "@types/jest": "^22.2.3",
     "typescript": "^2.8.3"
   },
   "jest": {
