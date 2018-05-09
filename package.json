@@ -1,6 +1,6 @@
 {
   "name": "redis-priority-queue",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Simple Promise based multi-channel priority queue using Redis sorted set.",
   "main": "index.js",
   "scripts": {

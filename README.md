@@ -21,7 +21,7 @@ const queue = require('redis-priority-queue');
 
 const config = queue.RedisConfig("localhost", 6379, null, null);
 
-const myQueue = queue.RedisPriorityQueue(config);
+const myQueue = new queue.RedisPriorityQueue(config);
 
 myQueue.length("emptyQueue")
   .then(result => {
