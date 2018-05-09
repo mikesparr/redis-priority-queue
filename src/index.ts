@@ -42,7 +42,7 @@ export class RedisPriorityQueue implements IPriorityQueue {
                 console.log(`Channel '${channel}' length is: ${reply}`);
                 resolve(reply);
             });
-        })
+        });
     }
 
     isEmpty(channel: string) : Promise<boolean> { 
@@ -56,7 +56,7 @@ export class RedisPriorityQueue implements IPriorityQueue {
                 console.log(`Channel '${channel}' isEmpty: ${reply > 0 ? false : true}`);
                 resolve(reply === 0);
             });
-        })
+        });
     }
 
     insertWithPriority(channel: string, element: any, priority: number) : Promise<void> {
@@ -76,30 +76,20 @@ export class RedisPriorityQueue implements IPriorityQueue {
 
     pullHighestPriority(channel: string) : Promise<string> {
         return new Promise((resolve, reject) => {
-
-            for (let attempts = 0; attempts < this.MAX_ATTEMPTS; attempts++) {
-                console.log(`Removing highest priority item from channel '${channel}'...`);
-                this.peek(channel)
-                    .then(item => {
-                        console.log(`Fetched ${item} and attempting to remove ...`);
-                        this._client.zrem(channel, item, (err: Error, reply: number) => {
-                            if (err !== null) {
-                                console.error(`Error popping latest record from channel '${channel}': `, err);
-                                reject(err);
-                            }
-                            
-                            console.log(`Removed item '${item}' from channel '${channel}'`);
-                            if (reply > 0) {
-                                resolve(item);
-                            }
-                        });
-                    })
-                    .catch(error => {
-                        console.error(`Error peeking for record to pop in channel '${channel}': `, error);
-                        reject(error);
-                    });
-            }
-        })
+            console.log(`Removing highest priority item from channel '${channel}'...`);
+            this._client.multi()
+                .zrevrange(channel, 0, 0, (err: Error, reply: string) => {
+                    this._client.zrem(channel, reply);
+                })
+                .exec((err: Error, replies: string) => {
+                    console.log({err, replies});
+                    if (err !== null) {
+                        console.error(`Error pulling item from channel '${channel}': `, err);
+                        reject(err);
+                    }
+                    resolve(replies.length && replies.length > 0 ? replies[0].toString() : null);
+                });
+        });
     }
 
     peek(channel: string) : Promise<string> {
@@ -111,7 +101,7 @@ export class RedisPriorityQueue implements IPriorityQueue {
                     reject(err);
                 }
 
-                resolve(reply[0]); // TODO: guard against unexpected type
+                resolve(reply.length && reply.length > 0 ? reply[0] : null);
             });
         });
     }

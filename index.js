@@ -60,27 +60,19 @@ var RedisPriorityQueue = (function () {
     RedisPriorityQueue.prototype.pullHighestPriority = function (channel) {
         var _this = this;
         return new Promise(function (resolve, reject) {
-            for (var attempts = 0; attempts < _this.MAX_ATTEMPTS; attempts++) {
-                console.log("Removing highest priority item from channel '" + channel + "'...");
-                _this.peek(channel)
-                    .then(function (item) {
-                    console.log("Fetched " + item + " and attempting to remove ...");
-                    _this._client.zrem(channel, item, function (err, reply) {
-                        if (err !== null) {
-                            console.error("Error popping latest record from channel '" + channel + "': ", err);
-                            reject(err);
-                        }
-                        console.log("Removed item '" + item + "' from channel '" + channel + "'");
-                        if (reply > 0) {
-                            resolve(item);
-                        }
-                    });
-                })
-                    .catch(function (error) {
-                    console.error("Error peeking for record to pop in channel '" + channel + "': ", error);
-                    reject(error);
-                });
-            }
+            console.log("Removing highest priority item from channel '" + channel + "'...");
+            _this._client.multi()
+                .zrevrange(channel, 0, 0, function (err, reply) {
+                _this._client.zrem(channel, reply);
+            })
+                .exec(function (err, replies) {
+                console.log({ err: err, replies: replies });
+                if (err !== null) {
+                    console.error("Error pulling item from channel '" + channel + "': ", err);
+                    reject(err);
+                }
+                resolve(replies.length && replies.length > 0 ? replies[0].toString() : null);
+            });
         });
     };
     RedisPriorityQueue.prototype.peek = function (channel) {
@@ -92,7 +84,7 @@ var RedisPriorityQueue = (function () {
                     console.error("Error peeking for first record in channel '" + channel + "': ", err);
                     reject(err);
                 }
-                resolve(reply[0]);
+                resolve(reply.length && reply.length > 0 ? reply[0] : null);
             });
         });
     };

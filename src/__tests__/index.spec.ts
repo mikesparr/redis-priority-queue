@@ -11,6 +11,7 @@ describe('RedisPriorityQueue', () => {
     );
     let myQueue : IPriorityQueue = new RedisPriorityQueue(config);
     let testKey : string = "test123";
+    let testEmptyKey : string = "testEmptyKey999";
 
     let client : any = redis.createClient(); // for confirming app TODO: mock
 
@@ -18,32 +19,34 @@ describe('RedisPriorityQueue', () => {
         expect(myQueue).toBeDefined();
     }); // constructor
 
+    beforeAll((done) => {
+        Promise.all([
+            myQueue.insertWithPriority(testKey, "hello", 1),
+            myQueue.insertWithPriority(testKey, "world", 2),
+            myQueue.insertWithPriority(testKey, "foo", 1)
+        ])
+            .then(values => {
+                console.log(`**** SETUP ****`);
+                done();
+            })
+            .catch(error => {
+                done.fail(error);
+            })
+    });
+
+    afterAll((done) => {
+        client.del(testKey, (err, reply) => {
+            if (err !== null) {
+                done.fail(err);
+            } else {
+                console.log(`**** TEARDOWN ****`);
+                done();
+            }
+        });
+    });
+
     describe('length', () => {
-        beforeAll((done) => {
-            Promise.all([
-                myQueue.insertWithPriority(testKey, "hello", 1),
-                myQueue.insertWithPriority(testKey, "world", 2),
-                myQueue.insertWithPriority(testKey, "foo", 1)
-            ])
-                .then(values => {
-                    done();
-                })
-                .catch(error => {
-                    done.fail(error);
-                });
-        });
-
-        afterAll((done) => {
-            client.del(testKey, (err, reply) => {
-                if (err !== null) {
-                    done.fail(err);
-                } else {
-                    done();
-                }
-            });
-        });
-
-        it('returns number of elements in queue', (done) => {
+        it('returns number of elements in active queue', (done) => {
             myQueue.length(testKey)
                 .then(result => {
                     expect(result).toEqual(3);
@@ -52,36 +55,23 @@ describe('RedisPriorityQueue', () => {
                 .catch(error => {
                     done.fail(error);
                 });
-        })
-    }); // length
+        });
 
-    describe('isEmpty', () => {
-        beforeAll((done) => {
-            Promise.all([
-                myQueue.insertWithPriority(testKey, "hello", 1),
-                myQueue.insertWithPriority(testKey, "world", 2),
-                myQueue.insertWithPriority(testKey, "foo", 1)
-            ])
-                .then(values => {
+        it('returns 0 if no elements or inactive queue', (done) => {
+            myQueue.length(testEmptyKey)
+                .then(result => {
+                    expect(result).toEqual(0);
                     done();
                 })
                 .catch(error => {
                     done.fail(error);
                 });
         });
+    }); // length
 
-        afterAll((done) => {
-            client.del(testKey, (err, reply) => {
-                if (err !== null) {
-                    done.fail(err);
-                } else {
-                    done();
-                }
-            });
-        });
-
+    describe('isEmpty', () => {
         it('returns true if no elements are in queue', (done) => {
-            myQueue.isEmpty("testEmptyKey123")
+            myQueue.isEmpty(testEmptyKey)
                 .then(result => {
                     expect(result).toBeTruthy();
                     done();
@@ -104,31 +94,6 @@ describe('RedisPriorityQueue', () => {
     }); // isEmpty
 
     describe('peek', () => {
-
-        beforeAll((done) => {
-            Promise.all([
-                myQueue.insertWithPriority(testKey, "hello", 1),
-                myQueue.insertWithPriority(testKey, "world", 2),
-                myQueue.insertWithPriority(testKey, "foo", 1)
-            ])
-                .then(values => {
-                    done();
-                })
-                .catch(error => {
-                    done.fail(error);
-                });
-        });
-
-        afterAll((done) => {
-            client.del(testKey, (err, reply) => {
-                if (err !== null) {
-                    done.fail(err);
-                } else {
-                    done();
-                }
-            });
-        });
-
         it('returns expected high-scoring record', (done) => {
             myQueue.peek(testKey)
                 .then(result => {
@@ -140,33 +105,21 @@ describe('RedisPriorityQueue', () => {
                     done.fail(error);
                 });
         });
-    }); // peek
-    
-    describe('insertWithPriority', () => {
-        beforeAll((done) => {
-            Promise.all([
-                myQueue.insertWithPriority(testKey, "hello", 1),
-                myQueue.insertWithPriority(testKey, "world", 2),
-                myQueue.insertWithPriority(testKey, "foo", 1)
-            ])
-                .then(values => {
+
+        it('returns null if no records', (done) => {
+            myQueue.peek(testEmptyKey)
+                .then(result => {
+                    console.log(`Result: ${result} is type ${typeof(result)}`);
+                    expect(result).toBeNull();
                     done();
                 })
                 .catch(error => {
                     done.fail(error);
                 });
-        });
-
-        afterAll((done) => {
-            client.del(testKey, (err, reply) => {
-                if (err !== null) {
-                    done.fail(err);
-                } else {
-                    done();
-                }
-            });
-        });
-
+        })
+    }); // peek
+    
+    describe('insertWithPriority', () => {
         it('inserted 2 records with 1 score', (done) => {
             client.zcount(testKey, 0, 1, (err, reply) => {
                 console.log(`testing 1 score ...`);
@@ -186,31 +139,7 @@ describe('RedisPriorityQueue', () => {
         });
     }); // insertWithPriority
 
-    describe('getHighestPriority', () => {
-        beforeAll((done) => {
-            Promise.all([
-                myQueue.insertWithPriority(testKey, "hello", 1),
-                myQueue.insertWithPriority(testKey, "world", 2),
-                myQueue.insertWithPriority(testKey, "foo", 1)
-            ])
-                .then(values => {
-                    done();
-                })
-                .catch(error => {
-                    done.fail(error);
-                });
-        });
-
-        afterAll((done) => {
-            client.del(testKey, (err, reply) => {
-                if (err !== null) {
-                    done.fail(err);
-                } else {
-                    done();
-                }
-            });
-        });
-
+    describe('pullHighestPriority', () => {
         it('pops highest priority item from queue', (done) => {
             myQueue.pullHighestPriority(testKey)
                 .then(result => {
@@ -218,7 +147,7 @@ describe('RedisPriorityQueue', () => {
                     expect(result).toEqual("world");
 
                     // confirm length of queue is now 2
-                    client.zcount(testKey, 0, 5, (err, reply) => {
+                    client.zcard(testKey, (err, reply) => {
                         console.log(`testing remaining item count ...`);
                         console.log({err, reply});
                         expect(reply).toEqual(2);
@@ -230,4 +159,5 @@ describe('RedisPriorityQueue', () => {
                 });
         });
     }); // getHighestPriority
+
 }); // redis priority queue
