@@ -11,23 +11,50 @@ export interface IPriorityQueue {
 export class RedisConfig {
     host: string;
     port: number;
-    username: string;
+    db: number;
     password: string;
 
-    constructor(host: string, port: number, username?: string, password?: string) {
+    constructor(host: string, port: number, db?: number, password?: string) {
         this.host = host;
         this.port = port;
-        this.username = username ? username : null;
+        this.db = db ? db : null;
         this.password = password ? password : null;
     }
 }
 
 export class RedisPriorityQueue implements IPriorityQueue {
     protected _client: any;
-    protected MAX_ATTEMPTS : number = 5;
+    protected readonly DEFAULT_REDIS_HOST : string = "localhost";
+    protected readonly DEFAULT_REDIS_PORT : number = 6379;
 
     constructor(config: RedisConfig) {
-        this._client = redis.createClient(); // TODO: use config 
+        // build properties for instantiating Redis
+        let options: {[key: string]: any} = {
+            host: config.host || this.DEFAULT_REDIS_HOST,
+            port: config.port || this.DEFAULT_REDIS_PORT,
+            db: config.db || null,
+            retry_strategy: function (options: any) {
+                if (options.error && options.error.code === 'ECONNREFUSED') {
+                    // End reconnecting on a specific error and flush all commands with
+                    // a individual error
+                    return new Error('The server refused the connection');
+                }
+                if (options.total_retry_time > 1000 * 60 * 60) {
+                    // End reconnecting after a specific timeout and flush all commands
+                    // with a individual error
+                    return new Error('Retry time exhausted');
+                }
+                if (options.attempt > 10) {
+                    // End reconnecting with built in error
+                    return undefined;
+                }
+                // reconnect after
+                return Math.min(options.attempt * 100, 3000);
+            }
+        };
+        if (config.password) options.password = config.password;
+
+        this._client = redis.createClient(options);
         console.log('Redis client created');
     }
 
@@ -79,7 +106,12 @@ export class RedisPriorityQueue implements IPriorityQueue {
             console.log(`Removing highest priority item from channel '${channel}'...`);
             this._client.multi()
                 .zrevrange(channel, 0, 0, (err: Error, reply: string) => {
-                    this._client.zrem(channel, reply);
+                    if (err !== null) {
+                        console.error(`Error fetching next item from '${channel}' to remove: `, err);
+                        reject(err);
+                    }
+                    const member: string = reply && Object.keys(reply).length > 0 ? reply : "none";
+                    this._client.zrem(channel, member);
                 })
                 .exec((err: Error, replies: string) => {
                     console.log({err, replies});
@@ -87,7 +119,9 @@ export class RedisPriorityQueue implements IPriorityQueue {
                         console.error(`Error pulling item from channel '${channel}': `, err);
                         reject(err);
                     }
-                    resolve(replies.length && replies.length > 0 ? replies[0].toString() : null);
+
+                    const item = replies.length && replies.length > 0 ? replies[0].toString() : null;
+                    resolve(item && Object.keys(item).length > 0 ? item : null);
                 });
         });
     }

@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var redis = require("redis");
 var RedisConfig = (function () {
-    function RedisConfig(host, port, username, password) {
+    function RedisConfig(host, port, db, password) {
         this.host = host;
         this.port = port;
-        this.username = username ? username : null;
+        this.db = db ? db : null;
         this.password = password ? password : null;
     }
     return RedisConfig;
@@ -13,8 +13,28 @@ var RedisConfig = (function () {
 exports.RedisConfig = RedisConfig;
 var RedisPriorityQueue = (function () {
     function RedisPriorityQueue(config) {
-        this.MAX_ATTEMPTS = 5;
-        this._client = redis.createClient();
+        this.DEFAULT_REDIS_HOST = "localhost";
+        this.DEFAULT_REDIS_PORT = 6379;
+        var options = {
+            host: config.host || this.DEFAULT_REDIS_HOST,
+            port: config.port || this.DEFAULT_REDIS_PORT,
+            db: config.db || null,
+            retry_strategy: function (options) {
+                if (options.error && options.error.code === 'ECONNREFUSED') {
+                    return new Error('The server refused the connection');
+                }
+                if (options.total_retry_time > 1000 * 60 * 60) {
+                    return new Error('Retry time exhausted');
+                }
+                if (options.attempt > 10) {
+                    return undefined;
+                }
+                return Math.min(options.attempt * 100, 3000);
+            }
+        };
+        if (config.password)
+            options.password = config.password;
+        this._client = redis.createClient(options);
         console.log('Redis client created');
     }
     RedisPriorityQueue.prototype.length = function (channel) {
@@ -63,7 +83,12 @@ var RedisPriorityQueue = (function () {
             console.log("Removing highest priority item from channel '" + channel + "'...");
             _this._client.multi()
                 .zrevrange(channel, 0, 0, function (err, reply) {
-                _this._client.zrem(channel, reply);
+                if (err !== null) {
+                    console.error("Error fetching next item from '" + channel + "' to remove: ", err);
+                    reject(err);
+                }
+                var member = reply && Object.keys(reply).length > 0 ? reply : "none";
+                _this._client.zrem(channel, member);
             })
                 .exec(function (err, replies) {
                 console.log({ err: err, replies: replies });
@@ -71,7 +96,8 @@ var RedisPriorityQueue = (function () {
                     console.error("Error pulling item from channel '" + channel + "': ", err);
                     reject(err);
                 }
-                resolve(replies.length && replies.length > 0 ? replies[0].toString() : null);
+                var item = replies.length && replies.length > 0 ? replies[0].toString() : null;
+                resolve(item && Object.keys(item).length > 0 ? item : null);
             });
         });
     };

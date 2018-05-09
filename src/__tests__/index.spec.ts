@@ -5,7 +5,7 @@ import * as redis from "redis";
 describe('RedisPriorityQueue', () => {
     let config: RedisConfig = new RedisConfig(
         "localhost",
-        6822,
+        6379,
         null,
         null
     );
@@ -122,8 +122,6 @@ describe('RedisPriorityQueue', () => {
     describe('insertWithPriority', () => {
         it('inserted 2 records with 1 score', (done) => {
             client.zcount(testKey, 0, 1, (err, reply) => {
-                console.log(`testing 1 score ...`);
-                console.log({err, reply});
                 expect(reply).toEqual(2);
                 done();
             });
@@ -131,8 +129,6 @@ describe('RedisPriorityQueue', () => {
 
         it('inserted 1 records with 2 score', (done) => {
             client.zcount(testKey, 2, 5, (err, reply) => {
-                console.log(`testing 1 score ...`);
-                console.log({err, reply});
                 expect(reply).toEqual(1);
                 done();
             });
@@ -140,6 +136,18 @@ describe('RedisPriorityQueue', () => {
     }); // insertWithPriority
 
     describe('pullHighestPriority', () => {
+        it('returns null if no item in queue', (done) => {
+            myQueue.pullHighestPriority(testEmptyKey)
+                .then(result => {
+                    // assert popped value is highest priority
+                    expect(result).toBeNull();
+                    done();
+                })
+                .catch(error => {
+                    done.fail(error);
+                });
+        });
+
         it('pops highest priority item from queue', (done) => {
             myQueue.pullHighestPriority(testKey)
                 .then(result => {
@@ -148,8 +156,6 @@ describe('RedisPriorityQueue', () => {
 
                     // confirm length of queue is now 2
                     client.zcard(testKey, (err, reply) => {
-                        console.log(`testing remaining item count ...`);
-                        console.log({err, reply});
                         expect(reply).toEqual(2);
                         done();
                     });
