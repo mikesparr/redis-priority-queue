@@ -39,12 +39,7 @@ var RedisPriorityQueue = (function () {
                     reject(err);
                 }
                 console.log("Channel '" + channel + "' isEmpty: " + (reply > 0 ? false : true));
-                if (reply > 0) {
-                    resolve(false);
-                }
-                else {
-                    resolve(true);
-                }
+                resolve(reply === 0);
             });
         });
     };
