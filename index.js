@@ -18,7 +18,6 @@ var RedisPriorityQueue = (function () {
         var options = {
             host: config.host || this.DEFAULT_REDIS_HOST,
             port: config.port || this.DEFAULT_REDIS_PORT,
-            db: config.db || null,
             retry_strategy: function (options) {
                 if (options.error && options.error.code === 'ECONNREFUSED') {
                     return new Error('The server refused the connection');
@@ -32,6 +31,8 @@ var RedisPriorityQueue = (function () {
                 return Math.min(options.attempt * 100, 3000);
             }
         };
+        if (config.db)
+            options.db = config.db;
         if (config.password)
             options.password = config.password;
         this._client = redis.createClient(options);
