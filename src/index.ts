@@ -2,17 +2,17 @@ import * as redis from "redis";
 
 export interface IPriorityQueue<T> {
     length(channel: string): Promise<number>;
-    isEmpty(channel: string) : Promise<boolean>;
-    insertWithPriority(channel: string, element: any, priority: number) : Promise<void>;
-    pullHighestPriority(channel: string) : Promise<T>;
+    isEmpty(channel: string): Promise<boolean>;
+    insertWithPriority(channel: string, element: any, priority: number): Promise<void>;
+    pullHighestPriority(channel: string): Promise<T>;
     peek(channel: string): Promise<T>;
 }
 
 export class RedisConfig {
-    host: string;
-    port: number;
-    db: number;
-    password: string;
+    public host: string;
+    public port: number;
+    public db: number;
+    public password: string;
 
     constructor(host: string, port: number, db?: number, password?: string) {
         this.host = host;
@@ -23,100 +23,89 @@ export class RedisConfig {
 }
 
 export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
-    protected _client: any;
-    protected readonly DEFAULT_REDIS_HOST : string = "localhost";
-    protected readonly DEFAULT_REDIS_PORT : number = 6379;
+    protected client: any;
+    protected readonly DEFAULT_REDIS_HOST: string = "localhost";
+    protected readonly DEFAULT_REDIS_PORT: number = 6379;
 
     constructor(config: RedisConfig) {
         // build properties for instantiating Redis
-        let options: {[key: string]: any} = {
+        const options: {[key: string]: any} = {
             host: config.host || this.DEFAULT_REDIS_HOST,
             port: config.port || this.DEFAULT_REDIS_PORT,
-            retry_strategy: function (options: any) {
-                if (options.error && options.error.code === 'ECONNREFUSED') {
+            retry_strategy: (status: any) => {
+                if (status.error && status.error.code === "ECONNREFUSED") {
                     // End reconnecting on a specific error and flush all commands with
                     // a individual error
-                    return new Error('The server refused the connection');
+                    return new Error("The server refused the connection");
                 }
-                if (options.total_retry_time > 1000 * 60 * 60) {
+                if (status.total_retry_time > 1000 * 60 * 60) {
                     // End reconnecting after a specific timeout and flush all commands
                     // with a individual error
-                    return new Error('Retry time exhausted');
+                    return new Error("Retry time exhausted");
                 }
-                if (options.attempt > 10) {
+                if (status.attempt > 10) {
                     // End reconnecting with built in error
                     return undefined;
                 }
                 // reconnect after
-                return Math.min(options.attempt * 100, 3000);
-            }
+                return Math.min(status.attempt * 100, 3000);
+            },
         };
-        if (config.db) options.db = config.db;
-        if (config.password) options.password = config.password;
+        if (config.db) { options.db = config.db; }
+        if (config.password) { options.password = config.password; }
 
-        this._client = redis.createClient(options);
-        console.log('Redis client created');
+        this.client = redis.createClient(options);
     }
 
-    length(channel: string) : Promise<number> {
+    public length(channel: string): Promise<number> {
         return new Promise((resolve, reject) => {
-            this._client.zcard(channel, (err: Error, reply: number) => {
+            this.client.zcard(channel, (err: Error, reply: number) => {
                 if (err !== null) {
-                    console.error(`Error getting length for channel '${channel}': `, err);
                     reject(err);
                 }
 
-                console.log(`Channel '${channel}' length is: ${reply}`);
                 resolve(reply);
             });
         });
     }
 
-    isEmpty(channel: string) : Promise<boolean> { 
+    public isEmpty(channel: string): Promise<boolean> {
         return new Promise((resolve, reject) => {
-            this._client.zcard(channel, (err: Error, reply: number) => {
+            this.client.zcard(channel, (err: Error, reply: number) => {
                 if (err !== null) {
-                    console.error(`Error checking channel '${channel}' isEmpty: `, err);
                     reject(err);
                 }
 
-                console.log(`Channel '${channel}' isEmpty: ${reply > 0 ? false : true}`);
                 resolve(reply === 0);
             });
         });
     }
 
-    insertWithPriority(channel: string, element: T, priority: number) : Promise<void> {
+    public insertWithPriority(channel: string, element: T, priority: number): Promise<void> {
         return new Promise((resolve, reject) => {
-            console.log(`Inserting into ${channel} with priority ${priority} ...`);
-            this._client.zincrby(channel, priority, element, (err: Error, reply: number) => {
+            this.client.zincrby(channel, priority, element, (err: Error, reply: number) => {
                 if (err !== null) {
-                    console.error(`Error inserting into channel '${channel}': `, err);
                     reject(err);
                 }
 
-                console.log(`Inserted into '${channel}' with priority '${priority}' and result: ${reply}`);
                 resolve();
             });
         });
     }
 
-    pullHighestPriority(channel: string) : Promise<T> {
+    public pullHighestPriority(channel: string): Promise<T> {
         return new Promise((resolve, reject) => {
-            console.log(`Removing highest priority item from channel '${channel}'...`);
-            this._client.multi()
+            this.client.multi()
                 .zrevrange(channel, 0, 0, (err: Error, reply: string) => {
                     if (err !== null) {
-                        console.error(`Error fetching next item from '${channel}' to remove: `, err);
                         reject(err);
                     }
 
                     const member: string = reply && Object.keys(reply).length > 0 ? reply : "none";
-                    this._client.zrem(channel, member);
+                    this.client.zrem(channel, member);
                 })
                 .exec((err: Error, replies: any) => {
                     if (err !== null) {
-                        console.error(`Error pulling item from channel '${channel}': `, err);
                         reject(err);
                     }
 
@@ -126,12 +115,10 @@ export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
         });
     }
 
-    peek(channel: string) : Promise<T> {
+    public peek(channel: string): Promise<T> {
         return new Promise((resolve, reject) => {
-            console.log(`Peeking at first record`);
-            this._client.zrevrange(channel, 0, 0, (err: Error, reply: any) => {
+            this.client.zrevrange(channel, 0, 0, (err: Error, reply: any) => {
                 if (err !== null) {
-                    console.error(`Error peeking for first record in channel '${channel}': `, err);
                     reject(err);
                 }
 

@@ -5,7 +5,10 @@ This is a simple Promise based multi-channel priority queue implementation that 
 You will need Redis server running.
 
 # Installation
-`npm install`
+```
+npm install redis-priority-queue
+yarn add redis-priority-queue
+```
 
 # Test
 The test script in `package.json` preprocesses the `.ts` file and then executes.
@@ -13,10 +16,10 @@ The test script in `package.json` preprocesses the `.ts` file and then executes.
 `npm test`
 
 # Usage
-The source was written in Typescript, yet it compiles to Javascript, so you can use in ES5 or later supported environments. The following code snippets are implemented in the `__tests__` folder.
+The source was written in Typescript, yet it compiles to Javascript (`npm run build`). You can use in ES5 or later supported environments. The following code snippets are implemented in the `__tests__` folder.
 
 ## Quick start (Node)
-```
+```javascript
 const queue = require('redis-priority-queue');
 
 const config = queue.RedisConfig("localhost", 6379, null, null);
@@ -34,7 +37,7 @@ myQueue.length("emptyQueue")
 
 ## Typescript
 ### Initialization
-```
+```typescript
 import {RedisConfig, IPriorityQueue, RedisPriorityQueue} from 'redis-priority-queue';
 
 let config: RedisConfig = new RedisConfig(
@@ -48,7 +51,7 @@ let myQueue : IPriorityQueue<string> = new RedisPriorityQueue(config);
 ```
 
 ### Insert element
-```
+```typescript
 Promise.all([
     myQueue.insertWithPriority(testKey, "hello", 1),
     myQueue.insertWithPriority(testKey, "world", 2),
@@ -63,7 +66,7 @@ Promise.all([
 ```
 
 ### Pull highest score element
-```
+```typescript
 myQueue.pullHighestPriority(testKey)
     .then(result => {
         // assert popped value is highest priority
@@ -75,7 +78,7 @@ myQueue.pullHighestPriority(testKey)
 ```
 
 ### Peek highest score element
-```
+```typescript
 myQueue.peek(testKey)
     .then(result => {
         expect(result).toEqual("world");
@@ -87,7 +90,7 @@ myQueue.peek(testKey)
 ```
 
 ### Check if empty
-```
+```typescript
 myQueue.isEmpty(testKey)
     .then(result => {
         expect(result).toBeFalsy();
@@ -99,7 +102,7 @@ myQueue.isEmpty(testKey)
 ```
 
 ### Get queue length
-```
+```typescript
 myQueue.length(testKey)
     .then(result => {
         expect(result).toEqual(3);
