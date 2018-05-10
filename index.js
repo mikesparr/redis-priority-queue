@@ -42,6 +42,9 @@ var RedisPriorityQueue = (function () {
     RedisPriorityQueue.prototype.length = function (channel) {
         var _this = this;
         return new Promise(function (resolve, reject) {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
             _this.client.zcard(channel, function (err, reply) {
                 if (err !== null) {
                     reject(err);
@@ -53,6 +56,9 @@ var RedisPriorityQueue = (function () {
     RedisPriorityQueue.prototype.isEmpty = function (channel) {
         var _this = this;
         return new Promise(function (resolve, reject) {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
             _this.client.zcard(channel, function (err, reply) {
                 if (err !== null) {
                     reject(err);
@@ -64,6 +70,15 @@ var RedisPriorityQueue = (function () {
     RedisPriorityQueue.prototype.insertWithPriority = function (channel, element, priority) {
         var _this = this;
         return new Promise(function (resolve, reject) {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
+            if (typeof element !== "string") {
+                throw new TypeError("Element parameter must be a string");
+            }
+            if (typeof priority !== "number") {
+                throw new TypeError("Priority parameter must be a number");
+            }
             _this.client.zincrby(channel, priority, element, function (err, reply) {
                 if (err !== null) {
                     reject(err);
@@ -75,6 +90,9 @@ var RedisPriorityQueue = (function () {
     RedisPriorityQueue.prototype.pullHighestPriority = function (channel) {
         var _this = this;
         return new Promise(function (resolve, reject) {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
             _this.client.multi()
                 .zrevrange(channel, 0, 0, function (err, reply) {
                 if (err !== null) {
@@ -95,6 +113,9 @@ var RedisPriorityQueue = (function () {
     RedisPriorityQueue.prototype.peek = function (channel) {
         var _this = this;
         return new Promise(function (resolve, reject) {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
             _this.client.zrevrange(channel, 0, 0, function (err, reply) {
                 if (err !== null) {
                     reject(err);

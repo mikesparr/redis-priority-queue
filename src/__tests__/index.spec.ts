@@ -11,11 +11,12 @@ describe("RedisPriorityQueue", () => {
     const myQueue: IPriorityQueue<string> = new RedisPriorityQueue(config);
     const testKey: string = "test123";
     const testEmptyKey: string = "testEmptyKey999";
+    const unusedKey: string = "unusedKey333";
 
     const client: any = redis.createClient(); // for confirming app TODO: mock
 
     it("instantiates a queue", () => {
-        expect(myQueue).toBeDefined();
+        expect(myQueue).toBeInstanceOf(RedisPriorityQueue);
     }); // constructor
 
     beforeAll((done) => {
@@ -33,16 +34,35 @@ describe("RedisPriorityQueue", () => {
     });
 
     afterAll((done) => {
-        client.del(testKey, (err, reply) => {
-            if (err !== null) {
-                done.fail(err);
-            } else {
-                done();
-            }
-        });
+        client.multi()
+            .del(testKey)
+            .del(testEmptyKey)
+            .del(unusedKey)
+            .exec((err, reply) => {
+                if (err !== null) {
+                    done.fail(err);
+                } else {
+                    done();
+                }
+            });
     });
 
     describe("length", () => {
+        it("returns a Promise", () => {
+            expect(myQueue.length(testKey)).toBeInstanceOf(Promise);
+        });
+
+        it("throws error if channel not valid", (done) => {
+            myQueue.length(null)
+                .then((result) => {
+                    done.fail();
+                })
+                .catch((error) => {
+                    expect(error).toBeInstanceOf(TypeError);
+                    done();
+                });
+        });
+
         it("returns number of elements in active queue", (done) => {
             myQueue.length(testKey)
                 .then((result) => {
@@ -67,6 +87,21 @@ describe("RedisPriorityQueue", () => {
     }); // length
 
     describe("isEmpty", () => {
+        it("returns a Promise", () => {
+            expect(myQueue.isEmpty(testKey)).toBeInstanceOf(Promise);
+        });
+
+        it("throws error if channel not valid", (done) => {
+            myQueue.isEmpty(null)
+                .then((result) => {
+                    done.fail();
+                })
+                .catch((error) => {
+                    expect(error).toBeInstanceOf(TypeError);
+                    done();
+                });
+        });
+
         it("returns true if no elements are in queue", (done) => {
             myQueue.isEmpty(testEmptyKey)
                 .then((result) => {
@@ -91,6 +126,21 @@ describe("RedisPriorityQueue", () => {
     }); // isEmpty
 
     describe("peek", () => {
+        it("returns a Promise", () => {
+            expect(myQueue.peek(testKey)).toBeInstanceOf(Promise);
+        });
+
+        it("throws error if channel not valid", (done) => {
+            myQueue.peek(null)
+                .then((result) => {
+                    done.fail(result);
+                })
+                .catch((error) => {
+                    expect(error).toBeInstanceOf(TypeError);
+                    done();
+                });
+        });
+
         it("returns expected high-scoring record", (done) => {
             myQueue.peek(testKey)
                 .then((result) => {
@@ -115,6 +165,43 @@ describe("RedisPriorityQueue", () => {
     }); // peek
 
     describe("insertWithPriority", () => {
+        it("returns a Promise", () => {
+            expect(myQueue.insertWithPriority(unusedKey, "data", 1)).toBeInstanceOf(Promise);
+        });
+
+        it("throws error if channel not valid string", (done) => {
+            myQueue.insertWithPriority(null, "test", 3)
+                .then(() => {
+                    done.fail();
+                })
+                .catch((error) => {
+                    expect(error).toBeInstanceOf(TypeError);
+                    done();
+                });
+        });
+
+        it("throws error if element not valid string", (done) => {
+            myQueue.insertWithPriority(unusedKey, null, 3)
+                .then(() => {
+                    done.fail();
+                })
+                .catch((error) => {
+                    expect(error).toBeInstanceOf(TypeError);
+                    done();
+                })
+        });
+
+        it("throws error if priority not valid number", (done) => {
+            myQueue.insertWithPriority(unusedKey, "test", null)
+                .then(() => {
+                    done.fail();
+                })
+                .catch((error) => {
+                    expect(error).toBeInstanceOf(TypeError);
+                    done();
+                });
+        });
+
         it("inserted 2 records with 1 score", (done) => {
             client.zcount(testKey, 0, 1, (err, reply) => {
                 expect(reply).toEqual(2);
@@ -131,6 +218,21 @@ describe("RedisPriorityQueue", () => {
     }); // insertWithPriority
 
     describe("pullHighestPriority", () => {
+        it("returns a Promise", () => {
+            expect(myQueue.pullHighestPriority(unusedKey)).toBeInstanceOf(Promise);
+        });
+
+        it("throws error if channel not valid", (done) => {
+            myQueue.pullHighestPriority(null)
+                .then((result) => {
+                    done.fail(result);
+                })
+                .catch((error) => {
+                    expect(error).toBeInstanceOf(TypeError);
+                    done();
+                });
+        });
+
         it("returns null if no item in queue", (done) => {
             myQueue.pullHighestPriority(testEmptyKey)
                 .then((result) => {

@@ -22,8 +22,8 @@ export class RedisConfig {
     }
 }
 
-export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
-    protected client: any;
+export class RedisPriorityQueue implements IPriorityQueue<string> {
+    protected client: redis.RedisClient;
     protected readonly DEFAULT_REDIS_HOST: string = "localhost";
     protected readonly DEFAULT_REDIS_PORT: number = 6379;
 
@@ -59,6 +59,10 @@ export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
 
     public length(channel: string): Promise<number> {
         return new Promise((resolve, reject) => {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
+
             this.client.zcard(channel, (err: Error, reply: number) => {
                 if (err !== null) {
                     reject(err);
@@ -71,6 +75,10 @@ export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
 
     public isEmpty(channel: string): Promise<boolean> {
         return new Promise((resolve, reject) => {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
+
             this.client.zcard(channel, (err: Error, reply: number) => {
                 if (err !== null) {
                     reject(err);
@@ -81,8 +89,18 @@ export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
         });
     }
 
-    public insertWithPriority(channel: string, element: T, priority: number): Promise<void> {
+    public insertWithPriority(channel: string, element: string, priority: number): Promise<void> {
         return new Promise((resolve, reject) => {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
+            if (typeof element !== "string") {
+                throw new TypeError("Element parameter must be a string");
+            }
+            if (typeof priority !== "number") {
+                throw new TypeError("Priority parameter must be a number");
+            }
+
             this.client.zincrby(channel, priority, element, (err: Error, reply: number) => {
                 if (err !== null) {
                     reject(err);
@@ -93,10 +111,14 @@ export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
         });
     }
 
-    public pullHighestPriority(channel: string): Promise<T> {
+    public pullHighestPriority(channel: string): Promise<string> {
         return new Promise((resolve, reject) => {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
+
             this.client.multi()
-                .zrevrange(channel, 0, 0, (err: Error, reply: string) => {
+                .zrevrange(channel, 0, 0, (err: Error | null, reply: any) => {
                     if (err !== null) {
                         reject(err);
                     }
@@ -115,8 +137,12 @@ export class RedisPriorityQueue<T> implements IPriorityQueue<T> {
         });
     }
 
-    public peek(channel: string): Promise<T> {
+    public peek(channel: string): Promise<string> {
         return new Promise((resolve, reject) => {
+            if (typeof channel !== "string") {
+                throw new TypeError("Channel parameter must be a string");
+            }
+
             this.client.zrevrange(channel, 0, 0, (err: Error, reply: any) => {
                 if (err !== null) {
                     reject(err);
