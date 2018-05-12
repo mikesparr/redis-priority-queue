@@ -35,6 +35,20 @@ myQueue.length("emptyQueue")
   });
 ```
 
+## Optional with existing client
+If you already have a program with a `RedisClient` you can pass the client as an optional second parameter.
+```
+const myQueue = new queue.RedisPriorityQueue(null, client);
+
+myQueue.length("emptyQueue")
+  .then(result => {
+    console.log({result});
+  })
+  .catch(error => {
+    console.error({error});
+  });
+```
+
 ## Typescript
 ### Initialization
 ```typescript

@@ -19,6 +19,11 @@ describe("RedisPriorityQueue", () => {
         expect(myQueue).toBeInstanceOf(RedisPriorityQueue);
     }); // constructor
 
+    it("uses existing RedisClient if passed", () => {
+        const queueWithClient: IPriorityQueue<string> = new RedisPriorityQueue(null, client);
+        expect(queueWithClient).toBeInstanceOf(RedisPriorityQueue);
+    }); // constructor
+
     beforeAll((done) => {
         Promise.all([
             myQueue.insertWithPriority(testKey, "hello", 1),
@@ -188,7 +193,7 @@ describe("RedisPriorityQueue", () => {
                 .catch((error) => {
                     expect(error).toBeInstanceOf(TypeError);
                     done();
-                })
+                });
         });
 
         it("throws error if priority not valid number", (done) => {

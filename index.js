@@ -12,32 +12,37 @@ var RedisConfig = (function () {
 }());
 exports.RedisConfig = RedisConfig;
 var RedisPriorityQueue = (function () {
-    function RedisPriorityQueue(config) {
+    function RedisPriorityQueue(config, client) {
         this.DEFAULT_REDIS_HOST = "localhost";
         this.DEFAULT_REDIS_PORT = 6379;
-        var options = {
-            host: config.host || this.DEFAULT_REDIS_HOST,
-            port: config.port || this.DEFAULT_REDIS_PORT,
-            retry_strategy: function (status) {
-                if (status.error && status.error.code === "ECONNREFUSED") {
-                    return new Error("The server refused the connection");
-                }
-                if (status.total_retry_time > 1000 * 60 * 60) {
-                    return new Error("Retry time exhausted");
-                }
-                if (status.attempt > 10) {
-                    return undefined;
-                }
-                return Math.min(status.attempt * 100, 3000);
-            },
-        };
-        if (config.db) {
-            options.db = config.db;
+        if (client && client instanceof redis.RedisClient) {
+            this.client = client;
         }
-        if (config.password) {
-            options.password = config.password;
+        else {
+            var options = {
+                host: config.host || this.DEFAULT_REDIS_HOST,
+                port: config.port || this.DEFAULT_REDIS_PORT,
+                retry_strategy: function (status) {
+                    if (status.error && status.error.code === "ECONNREFUSED") {
+                        return new Error("The server refused the connection");
+                    }
+                    if (status.total_retry_time > 1000 * 60 * 60) {
+                        return new Error("Retry time exhausted");
+                    }
+                    if (status.attempt > 10) {
+                        return undefined;
+                    }
+                    return Math.min(status.attempt * 100, 3000);
+                },
+            };
+            if (config.db) {
+                options.db = config.db;
+            }
+            if (config.password) {
+                options.password = config.password;
+            }
+            this.client = redis.createClient(options);
         }
-        this.client = redis.createClient(options);
     }
     RedisPriorityQueue.prototype.length = function (channel) {
         var _this = this;
