@@ -5,7 +5,7 @@ This is a simple Promise based multi-channel priority queue implementation that 
 You will need Redis server running.
 
 # Installation
-```
+```bash
 npm install redis-priority-queue
 yarn add redis-priority-queue
 ```
@@ -37,7 +37,7 @@ myQueue.length("emptyQueue")
 
 ## Optional with existing client
 If you already have a program with a `RedisClient` you can pass the client as an optional second parameter.
-```
+```javascript
 const myQueue = new queue.RedisPriorityQueue(null, client);
 
 myQueue.length("emptyQueue")
