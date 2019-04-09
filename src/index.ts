@@ -135,7 +135,7 @@ export class RedisPriorityQueue implements IPriorityQueue<string> {
                         reject(err);
                     }
 
-                    const item = replies.length && replies.length > 0 ? replies[0].toString() : null;
+                    const item = replies && replies.length && replies.length > 0 ? replies[0].toString() : null;
                     resolve(item && Object.keys(item).length > 0 ? item : null);
                 });
         });
