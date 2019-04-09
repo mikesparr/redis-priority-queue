@@ -110,7 +110,7 @@ var RedisPriorityQueue = (function () {
                 if (err !== null) {
                     reject(err);
                 }
-                var item = replies.length && replies.length > 0 ? replies[0].toString() : null;
+                var item = replies && replies.length && replies.length > 0 ? replies[0].toString() : null;
                 resolve(item && Object.keys(item).length > 0 ? item : null);
             });
         });
